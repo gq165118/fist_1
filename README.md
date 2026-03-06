@@ -29,3 +29,12 @@ python hello.py Alice
 ```bash
 python -m pytest -q
 ```
+
+## Demo Scripts
+
+Run the demo hello script:
+
+```bash
+bash scripts/hello.sh
+# Output: hello claw
+```
