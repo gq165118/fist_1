@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cmd="${1:-}"
+shift || true
+
+TASK_DIR=".claw/tasks"
+
+die() { echo "❌ $*" >&2; exit 1; }
+
+sanitize_task_name() {
+  # 允许 a-zA-Z0-9 _ - .
+  # 其他字符替换为 -
+  local s="$1"
+  s="$(printf "%s" "$s" | tr ' ' '-' | sed -E 's/[^a-zA-Z0-9_.-]+/-/g')"
+  # 防呆：不能以 - 或 . 开头
+  s="$(printf "%s" "$s" | sed -E 's/^[-.]+//')"
+  printf "%s" "$s"
+}
+
+case "$cmd" in
+  new)
+    raw_name="${1:-}"
+    [[ -n "$raw_name" ]] || die "Usage: .claw/claw new <task_name>"
+    name="$(sanitize_task_name "$raw_name")"
+    [[ -n "$name" ]] || die "task_name is empty after sanitize"
+
+    mkdir -p "$TASK_DIR"
+    file="$TASK_DIR/$name.md"
+
+    if [[ -e "$file" ]]; then
+      die "Task file already exists: $file"
+    fi
+
+    cat > "$file" <<MD
+# Task: $name
+
+## Goal
+(一句话描述你要做什么)
+
+## Context
+- Repo: $(basename "$(pwd)")
+- Dir: $(pwd)
+
+## Constraints
+- (比如：用某语言/不改无关文件/不能引入大依赖/兼容 macOS)
+
+## Output Requirements
+- (比如：需要 CLI、需要 README、需要测试、需要示例截图等)
+
+## Acceptance Criteria (checkbox)
+- [ ] (可验证的结果 1)
+- [ ] (可验证的结果 2)
+
+## Plan (short)
+- (1-5 条即可，越短越省 token)
+
+## Test
+\`\`\`bash
+# 在这里写“唯一的验收命令”
+# 例：bash scripts/hello.sh
+echo "no tests"
+\`\`\`
+
+## Notes
+- (可选：任何补充信息、接口、参考链接、注意事项)
+MD
+
+    echo "✅ Created: $file"
+
+    # 可选：自动打开编辑器（按你的习惯改）
+    # 优先用 $EDITOR，其次用 nano
+    if [[ -n "${EDITOR:-}" ]]; then
+      "$EDITOR" "$file"
+    else
+      echo "Tip: set EDITOR=code (or vim/nano) to auto-open."
+    fi
+    ;;
+  *)
+    cat <<'HELP'
+Usage:
+  .claw/claw new <task_name>
+
+Example:
+  .claw/claw new task_demo4
+HELP
+    exit 2
+    ;;
+esac
