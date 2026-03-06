@@ -37,4 +37,7 @@ Run the demo hello script:
 ```bash
 bash scripts/hello.sh
 # Output: hello claw
+
+bash scripts/hello2.sh
+# Output: hello claw 2
 ```

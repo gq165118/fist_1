@@ -3,89 +3,131 @@ set -euo pipefail
 
 TASK="${1:-}"
 if [[ -z "$TASK" ]]; then
-  echo "Usage: .claw/run_task.sh <task_name>"
-  exit 2
+  echo "Usage: .claw/run_task.sh <task_name_without_ext>"
+  exit 1
 fi
 
-# ----- OpenClaw hooks env (you can override when calling) -----
-: "${OPENCLAW_URL:=http://127.0.0.1:18789/hooks/agent}"
-: "${OPENCLAW_HOOKS_TOKEN:=}"
-: "${OPENCLAW_AGENT_ID:=coding}"
-: "${OPENCLAW_TELEGRAM_TO:=8767678598}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TASK_FILE="$ROOT/.claw/tasks/${TASK}.md"
 
-notify() {
-  # msg in $1
-  if [[ -n "${OPENCLAW_HOOKS_TOKEN}" ]]; then
-    OPENCLAW_URL="$OPENCLAW_URL" \
-    OPENCLAW_HOOKS_TOKEN="$OPENCLAW_HOOKS_TOKEN" \
-    OPENCLAW_AGENT_ID="$OPENCLAW_AGENT_ID" \
-    OPENCLAW_TELEGRAM_TO="$OPENCLAW_TELEGRAM_TO" \
-    ~/.claude/hooks/openclaw_notify.sh "$1" >/dev/null || true
-  fi
-}
-
-ROOT="$(pwd)"
-notify "🟦 任务开始：$TASK
-• Dir: $ROOT"
-
-# ----- Create/checkout branch -----
-BRANCH="feature/${TASK}"
-git checkout -B "$BRANCH"
-
-notify "🟨 已切换分支：$BRANCH"
-
-# ----- Run Claude Code to implement task -----
-# 你可以把 task 文件放在 .claw/tasks/${TASK}.md，然后让 claude 读取它，省 token
-TASK_FILE=".claw/tasks/${TASK}.md"
 if [[ ! -f "$TASK_FILE" ]]; then
-  notify "⚠️ 未找到任务文件：$TASK_FILE
-我将继续，但建议你创建它以固定输入格式。"
+  echo "Task file not found: $TASK_FILE"
+  exit 1
 fi
 
-# Claude Code（示例）：如果你用的是 `claude` 命令，把下面这行换成你实际可用的调用方式
-# 例如：claude -p "$(cat "$TASK_FILE")"
-if command -v claude >/dev/null 2>&1; then
-  if [[ -f "$TASK_FILE" ]]; then
-    claude -p "$(cat "$TASK_FILE")"
-  else
-    claude -p "Task: ${TASK}. Please implement according to repo conventions."
-  fi
+cd "$ROOT"
+
+# ---- Env defaults (你也可以在外部 export 覆盖) ----
+export OPENCLAW_URL="${OPENCLAW_URL:-http://127.0.0.1:18789/hooks/agent}"
+export OPENCLAW_AGENT_ID="${OPENCLAW_AGENT_ID:-coding}"
+export OPENCLAW_TELEGRAM_TO="${OPENCLAW_TELEGRAM_TO:-8767678598}"
+export OPENCLAW_HOOKS_TOKEN="${OPENCLAW_HOOKS_TOKEN:-}"
+
+NOTIFY="${HOME}/.claude/hooks/openclaw_notify.sh"
+
+# ---- 1) 从任务单解析 Branch/Commit（简单 grep；写得规整就很稳）----
+BRANCH="$(grep -E '^[[:space:]]*-[[:space:]]*Branch:[[:space:]]*' "$TASK_FILE" \
+  | head -n1 \
+  | sed -E 's/^[[:space:]]*-[[:space:]]*Branch:[[:space:]]*//; s/[[:space:]]+$//')"
+
+COMMIT_MSG="$(grep -E '^[[:space:]]*-[[:space:]]*Commit message:[[:space:]]*' "$TASK_FILE" \
+  | head -n1 \
+  | sed -E 's/^[[:space:]]*-[[:space:]]*Commit message:[[:space:]]*//; s/[[:space:]]+$//')"
+  
+if [[ -z "${BRANCH}" ]]; then
+  BRANCH="feature/${TASK}"
+fi
+if [[ -z "${COMMIT_MSG}" ]]; then
+  COMMIT_MSG="feat: ${TASK}"
+fi
+
+"$NOTIFY" "🟦 任务开始：${TASK}
+• Dir: ${ROOT}
+• Branch: ${BRANCH}"
+
+# ---- 2) Git checkout/reset branch ----
+git fetch -q origin || true
+
+if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
+  git checkout -q "${BRANCH}"
 else
-  notify "⚠️ 未检测到 claude CLI（command not found: claude）。
-请把 run_task.sh 里的 Claude 调用改成你本机实际的 Claude Code 启动命令。"
+  git checkout -q -b "${BRANCH}"
 fi
 
-# ----- Tests (customize) -----
-# 如果项目没测试，这段可以先不失败：你可以改成你的实际测试命令
-if [[ -f package.json ]]; then
-  npm test
-elif [[ -f Makefile ]]; then
-  make test || true
-else
-  # no-op
-  true
+"$NOTIFY" "🟨 已切换分支：${BRANCH}"
+
+# ---- 3) 调 Claude Code（headless）真正完成“设计→编码” ----
+# 关键：用 claude -p 读取任务单全文（非交互，适合自动化）
+# 你需要本机已经能运行 `claude` 命令（Claude Code CLI）
+PROMPT="$(cat "$TASK_FILE")"
+
+# 可选：把 prompt 也写入日志文件，便于回溯
+mkdir -p "$ROOT/.claw/logs"
+LOGFILE="$ROOT/.claw/logs/${TASK}.claude.log"
+
+set +e
+claude -p "$PROMPT" | tee "$LOGFILE"
+CLAUDE_RC=${PIPESTATUS[0]}
+set -e
+
+if [[ $CLAUDE_RC -ne 0 ]]; then
+  "$NOTIFY" "🟥 Claude Code 执行失败（exit=${CLAUDE_RC}）
+• Task: ${TASK}
+• Log: .claw/logs/${TASK}.claude.log"
+  exit $CLAUDE_RC
 fi
 
-notify "🟩 测试步骤已执行（或无测试）。"
+# ---- 4) 跑测试（从任务单 Commands/Tests 里取；这里先做一个最小版本：尝试提取每行 '- ' 命令）----
+# 你如果想更严格，可以把 Tests 固定为单行 `- <command>`
+TEST_CMDS="$(awk '
+  BEGIN{inTests=0}
+  /^### Tests/{inTests=1; next}
+  /^### /{if(inTests) exit}
+  {if(inTests) print}
+' "$TASK_FILE" | sed -E 's/^\s*-\s*//g' | sed '/^\s*$/d')"
 
-# ----- Commit -----
+if [[ -z "$TEST_CMDS" ]]; then
+  TEST_CMDS='echo "no tests"'
+fi
+
+"$NOTIFY" "🧪 开始测试：
+$TEST_CMDS"
+
+set +e
+bash -lc "$TEST_CMDS"
+TEST_RC=$?
+set -e
+
+if [[ $TEST_RC -ne 0 ]]; then
+  "$NOTIFY" "🟥 测试失败（exit=${TEST_RC}）
+• Task: ${TASK}
+• Branch: ${BRANCH}"
+  exit $TEST_RC
+fi
+
+"$NOTIFY" "🟩 测试通过"
+
+# ---- 5) 提交 & push ----
 git add -A
+
 if git diff --cached --quiet; then
-  notify "⚠️ 没有变更可提交（git diff --cached 为空）。任务可能未产生修改。"
+  "$NOTIFY" "🟦 无变更可提交（任务可能只做了分析/未落地修改）
+• Task: ${TASK}
+• Branch: ${BRANCH}"
 else
-  git commit -m "feat: ${TASK}"
+  git commit -m "$COMMIT_MSG"
 fi
 
-# ----- Push -----
 git push -u origin "$BRANCH"
 
-REPO_URL=$(git remote get-url origin | sed -e 's#git@github.com:#https://github.com/#' -e 's#\.git$##')
-COMMIT=$(git rev-parse --short HEAD)
+REPO_URL="$(git remote get-url origin | sed -e 's#git@github.com:#https://github.com/#' -e 's#\.git$##')"
+CUR_BRANCH="$(git branch --show-current)"
+COMMIT="$(git rev-parse --short HEAD)"
 
-notify "✅ 已推送到 GitHub
+"$NOTIFY" "✅ 已推送到 GitHub
 • Repo: $REPO_URL
-• Branch: $BRANCH
+• Branch: $CUR_BRANCH
 • Commit: $COMMIT
-• Compare: $REPO_URL/compare/$BRANCH?expand=1"
+• Compare: $REPO_URL/compare/$CUR_BRANCH?expand=1"
 
 echo "Done."
