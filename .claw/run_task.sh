@@ -10,6 +10,22 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TASK_FILE="$ROOT/.claw/tasks/${TASK}.md"
 
+# --- Extract TEST command from task file ---
+TEST_CMD="$(awk '
+  BEGIN{in_test=0; in_code=0}
+  /^##[[:space:]]+Test[[:space:]]*$/ {in_test=1; next}
+  in_test && /^##[[:space:]]+/ {exit}                  # next heading -> stop
+  in_test && /^```bash[[:space:]]*$/ {in_code=1; next}  # code block start
+  in_code && /^```[[:space:]]*$/ {exit}                # code block end -> stop
+  in_code {print}
+' "$TASK_FILE" | sed -e 's/[[:space:]]\+$//' )"
+
+# 防呆：必须有测试命令
+if [[ -z "${TEST_CMD//[[:space:]]/}" ]]; then
+  ~/.claude/hooks/openclaw_notify.sh "🟨 未找到 Test 命令（请在任务文件里写：## Test + 代码块 ```bash ... ```）\n• Task: $TASK_NAME"
+  exit 2
+fi
+
 if [[ ! -f "$TASK_FILE" ]]; then
   echo "Task file not found: $TASK_FILE"
   exit 1
@@ -33,7 +49,7 @@ BRANCH="$(grep -E '^[[:space:]]*-[[:space:]]*Branch:[[:space:]]*' "$TASK_FILE" \
 COMMIT_MSG="$(grep -E '^[[:space:]]*-[[:space:]]*Commit message:[[:space:]]*' "$TASK_FILE" \
   | head -n1 \
   | sed -E 's/^[[:space:]]*-[[:space:]]*Commit message:[[:space:]]*//; s/[[:space:]]+$//')"
-  
+
 if [[ -z "${BRANCH}" ]]; then
   BRANCH="feature/${TASK}"
 fi

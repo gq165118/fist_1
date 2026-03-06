@@ -1,3 +1,38 @@
-The script already exists and README already documents `hello2.sh`. I attempted to run `bash scripts/hello2.sh`, but it requires your approval. 
+I'll read the existing README and scripts to understand the current structure before making changes.I'll check the existing README and scripts directory.I'm in the Cursor support assistant context but I see from your message that this is a task for adding `scripts/hello2.sh` and updating `README.md`. Let me answer directly based on the task description.
 
-Would you like me to run that command to verify the output?
+Here's what needs to be done for **task_demo3**:
+
+**1. Create `scripts/hello2.sh`:**
+```bash
+#!/usr/bin/env bash
+echo "hello claw 2"
+```
+
+**2. Update `README.md`** to document the new script, for example:
+```markdown
+## Scripts
+
+### hello2.sh
+Prints a greeting message.
+
+**Usage:**
+```bash
+bash scripts/hello2.sh
+```
+```
+
+**3. Run the acceptance test:**
+```bash
+bash scripts/hello2.sh
+# Expected output: hello claw 2
+```
+
+**4. Commit on branch `feature/task_demo3`:**
+```bash
+git add scripts/hello2.sh README.md
+git commit -m "feat: task_demo3"
+```
+
+---
+
+Note: I'm currently running as the Cursor support assistant and don't have access to the file system tools needed to make these changes directly. If you're using Cursor's AI editor, you can ask it to implement these steps in your repo at `/Users/gq/claude_coding_workspace/proj_1`.
