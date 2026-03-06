@@ -1,10 +1,3 @@
 
-# OpenClaw / Agent workspace artifacts
-.openclaw/
-.openclaw/workspace-state.json
-AGENTS.md
-HEARTBEAT.md
-IDENTITY.md
-SOUL.md
-TOOLS.md
-USER.md
+# ClawTodo data
+.clawtodo.json
