@@ -1064,8 +1064,15 @@
             draw() {
                 const ctx = this.ctx;
                 const ts = this.tileSize;
-                const skin = CONFIG.SKINS.find(s => s.id === this.skin) || CONFIG.SKINS[0];
                 
+                // 获取皮肤颜色，默认绿色
+                let snakeColor = '#00ff88';
+                if (this.skin && this.skin !== 'classic') {
+                    const skinObj = CONFIG.SKINS.find(s => s.id === this.skin);
+                    if (skinObj) snakeColor = skinObj.color;
+                }
+                
+                // 清空画布
                 ctx.fillStyle = '#1a1a2e';
                 ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
@@ -1105,25 +1112,23 @@
                     const isHead = i === 0;
                     
                     if (isHead) {
-                        ctx.fillStyle = this.powerups.shield ? '#9b59b6' : skin.color;
+                        ctx.fillStyle = this.powerups.shield ? '#9b59b6' : snakeColor;
                     } else {
                         const alpha = 1 - (i / this.snake.body.length) * 0.5;
-                        if (skin.color === 'gradient') {
+                        if (snakeColor === 'gradient') {
                             ctx.fillStyle = `hsl(${i * 10}, 70%, 50%)`;
                         } else {
                             // Convert hex to rgba
-                            let hex = skin.color;
+                            let hex = snakeColor;
                             if (hex.startsWith('#')) hex = hex.slice(1);
                             const r = parseInt(hex.slice(0, 2), 16);
                             const g = parseInt(hex.slice(2, 4), 16);
                             const b = parseInt(hex.slice(4, 6), 16);
                             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
                         }
-                        ctx.globalAlpha = 1;
                     }
                     
                     ctx.fillRect(part.x * ts + 1, part.y * ts + 1, ts - 2, ts - 2);
-                    ctx.globalAlpha = 1;
                     
                     // 蛇眼
                     if (isHead) {
