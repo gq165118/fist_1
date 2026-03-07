@@ -493,8 +493,8 @@
 <body>
     <!-- 启动画面 -->
     <div id="startScreen" class="screen">
-        <div class="decor-snake">🐍</div>
-        <div class="title">贪吃蛇</div>
+        <div class="decor-snake" style="font-size: 4rem; line-height: 1;">🐍</div>
+        <div class="title" style="font-size: 2.5rem;">贪吃蛇 SNAKE</div>
         <div class="subtitle">完整版 · 更多乐趣</div>
         <button class="menu-btn" onclick="showMenu()">开始游戏</button>
         <button class="menu-btn secondary" onclick="showTutorial()">📖 教程</button>
@@ -1210,10 +1210,12 @@
                 const isUnlocked = unlocked.includes(skin.id) || highScore >= skin.unlock;
                 const isActive = current === skin.id;
                 const lockIcon = isUnlocked ? '' : '🔒';
+                const clickFn = isUnlocked ? `selectSkin('${skin.id}')` : '';
                 return `
                     <div class="skin-item ${isActive ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}"
-                         style="background: ${skin.color === 'gradient' ? 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet)' : skin.color}"
-                         onclick="${isUnlocked ? `selectSkin('${skin.id}')` : ''}"
+                         style="background: ${skin.color === 'gradient' ? 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet)' : skin.color}; cursor: pointer;"
+                         onclick="${clickFn}"
+                         ontouchstart="${clickFn}"
                          title="${skin.name} ${lockIcon} (需要 ${skin.unlock} 分)">
                         ${skin.emoji}
                     </div>
