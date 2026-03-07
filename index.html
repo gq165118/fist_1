@@ -1065,80 +1065,34 @@
                 const ctx = this.ctx;
                 const ts = this.tileSize;
                 
-                // 获取皮肤颜色，默认绿色
-                let snakeColor = '#00ff88';
-                if (this.skin && this.skin !== 'classic') {
-                    const skinObj = CONFIG.SKINS.find(s => s.id === this.skin);
-                    if (skinObj) snakeColor = skinObj.color;
-                }
-                
-                // 清空画布
-                ctx.fillStyle = '#1a1a2e';
+                // 背景 - 深蓝色
+                ctx.fillStyle = '#1a1a3e';
                 ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                // 网格
-                ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-                ctx.lineWidth = 1;
-                for (let i = 0; i <= this.gridSize; i++) {
-                    ctx.beginPath(); ctx.moveTo(i * ts, 0); ctx.lineTo(i * ts, this.canvas.height); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(0, i * ts); ctx.lineTo(this.canvas.width, i * ts); ctx.stroke();
-                }
-                
-                // 障碍物
-                ctx.fillStyle = '#4a4a6a';
-                for (let obs of this.obstacles.items) {
-                    ctx.fillRect(obs.x * ts + 2, obs.y * ts + 2, ts - 4, ts - 4);
-                }
-                
-                // 普通食物
-                ctx.fillStyle = '#ff4757';
-                ctx.beginPath();
-                ctx.arc(this.normal.x * ts + ts/2, this.normal.y * ts + ts/2, ts/2 - 3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // 特殊食物
-                if (this.food.special) {
-                    const cfg = CONFIG.SPECIAL_FOOD[this.food.special.type];
-                    ctx.fillStyle = cfg.color;
-                    ctx.beginPath();
-                    ctx.arc(this.food.special.x * ts + ts/2, this.food.special.y * ts + ts/2, ts/2 - 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.shadowColor = cfg.color; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
-                }
-                
-                // 蛇
-                for (let i = 0; i < this.snake.body.length; i++) {
-                    const part = this.snake.body[i];
-                    const isHead = i === 0;
-                    
-                    if (isHead) {
-                        ctx.fillStyle = this.powerups.shield ? '#9b59b6' : snakeColor;
+                // 画蛇 - 简化为最基础的画法，蛇头亮绿，蛇身深绿
+                const snakeParts = this.snake.body;
+                for (let i = 0; i < snakeParts.length; i++) {
+                    const p = snakeParts[i];
+                    // 蛇头用最亮的绿色
+                    if (i === 0) {
+                        ctx.fillStyle = '#00FF00';
                     } else {
-                        const alpha = 1 - (i / this.snake.body.length) * 0.5;
-                        if (snakeColor === 'gradient') {
-                            ctx.fillStyle = `hsl(${i * 10}, 70%, 50%)`;
-                        } else {
-                            // Convert hex to rgba
-                            let hex = snakeColor;
-                            if (hex.startsWith('#')) hex = hex.slice(1);
-                            const r = parseInt(hex.slice(0, 2), 16);
-                            const g = parseInt(hex.slice(2, 4), 16);
-                            const b = parseInt(hex.slice(4, 6), 16);
-                            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                        }
+                        ctx.fillStyle = '#00AA00';
                     }
-                    
-                    ctx.fillRect(part.x * ts + 1, part.y * ts + 1, ts - 2, ts - 2);
-                    
-                    // 蛇眼
-                    if (isHead) {
-                        ctx.fillStyle = '#fff';
-                        const d = this.snake.direction;
-                        const ex = part.x * ts + ts/2 + d.x * ts/4;
-                        const ey = part.y * ts + ts/2 + d.y * ts/4;
-                        ctx.beginPath(); ctx.arc(ex - d.y * 3, ey + d.x * 3, 2.5, 0, Math.PI * 2); ctx.fill();
-                        ctx.beginPath(); ctx.arc(ex + d.y * 3, ey - d.x * 3, 2.5, 0, Math.PI * 2); ctx.fill();
-                    }
+                    ctx.fillRect(p.x * ts + 1, p.y * ts + 1, ts - 2, ts - 2);
+                }
+                
+                // 画食物 - 红色
+                if (this.food.normal.x >= 0) {
+                    ctx.fillStyle = '#FF4444';
+                    ctx.beginPath();
+                    ctx.arc(
+                        this.food.normal.x * ts + ts/2,
+                        this.food.normal.y * ts + ts/2,
+                        ts/2 - 2,
+                        0, Math.PI * 2
+                    );
+                    ctx.fill();
                 }
             }
         }
