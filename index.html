@@ -63,6 +63,16 @@
             display: none;
         }
         
+        #gameUI {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #gameUI.hidden {
+            display: none;
+        }
+        
         .title {
             font-size: 2.8rem;
             font-weight: bold;
@@ -583,7 +593,8 @@
     </div>
     
     <!-- 游戏界面 -->
-    <div class="game-header">
+    <div id="gameUI" class="hidden">
+        <div class="game-header">
         <div class="header-item">
             <div class="header-label">得分</div>
             <div class="header-value" id="score">0</div>
@@ -641,6 +652,7 @@
     </div>
     
     <p class="instructions">滑动屏幕 / 方向键 / WASD · P 暂停</p>
+    </div>
 
     <script>
         // ==================== 配置 ====================
@@ -669,7 +681,7 @@
                 { id: 'ice', name: '冰雪', color: '#74b9ff', emoji: '❄️', unlock: 100 },
                 { id: 'gold', name: '黄金', color: '#ffd700', emoji: '👑', unlock: 500 },
                 { id: 'rainbow', name: '彩虹', color: 'gradient', emoji: '🌈', unlock: 1000 },
-                { id: 'dragon', name: '神龙', color59b6',: '#9b emoji: '🐉', unlock: 2000 },
+                { id: 'dragon', name: '神龙', color: '#9b59b6', emoji: '🐉', unlock: 2000 },
                 { id: 'robot', name: '机器', color: '#95a5a6', emoji: '🤖', unlock: 3000 },
                 { id: 'alien', name: '外星人', color: '#2ecc71', emoji: '👽', unlock: 5000 }
             ]
@@ -1125,12 +1137,14 @@
         function showStart() {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
             document.getElementById('startScreen').classList.remove('hidden');
+            document.getElementById('gameUI').classList.add('hidden');
         }
         
         function showMenu() {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
             document.getElementById('menuScreen').classList.remove('hidden');
             document.getElementById('gameoverOverlay').classList.remove('show');
+            document.getElementById('gameUI').classList.add('hidden');
             renderSkins();
         }
         
@@ -1140,6 +1154,7 @@
             document.querySelector('.tutorial-step[data-step="1"]').classList.add('active');
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
             document.getElementById('tutorialScreen').classList.remove('hidden');
+            document.getElementById('gameUI').classList.add('hidden');
         }
         
         function prevTutorial() {
@@ -1163,6 +1178,7 @@
         function showLeaderboard() {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
             document.getElementById('leaderboardScreen').classList.remove('hidden');
+            document.getElementById('gameUI').classList.add('hidden');
             renderLeaderboard();
         }
         
@@ -1225,6 +1241,7 @@
         
         function startGame() {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById('gameUI').classList.remove('hidden');
             game.start();
         }
         
