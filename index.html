@@ -1108,10 +1108,18 @@
                         ctx.fillStyle = this.powerups.shield ? '#9b59b6' : skin.color;
                     } else {
                         const alpha = 1 - (i / this.snake.body.length) * 0.5;
-                        ctx.fillStyle = skin.color === 'gradient' 
-                            ? `hsl(${i * 10}, 70%, 50%)`
-                            : skin.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba').replace('#', ''); // 简化
-                        ctx.globalAlpha = alpha;
+                        if (skin.color === 'gradient') {
+                            ctx.fillStyle = `hsl(${i * 10}, 70%, 50%)`;
+                        } else {
+                            // Convert hex to rgba
+                            let hex = skin.color;
+                            if (hex.startsWith('#')) hex = hex.slice(1);
+                            const r = parseInt(hex.slice(0, 2), 16);
+                            const g = parseInt(hex.slice(2, 4), 16);
+                            const b = parseInt(hex.slice(4, 6), 16);
+                            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                        }
+                        ctx.globalAlpha = 1;
                     }
                     
                     ctx.fillRect(part.x * ts + 1, part.y * ts + 1, ts - 2, ts - 2);
